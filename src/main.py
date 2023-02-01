@@ -1,4 +1,5 @@
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -33,6 +34,17 @@ def plot_dist(x, y, title, xlabel, ylabel):
     plt.show()
 
 
+def time_series_build(predictor):
+
+    x = np.array(predictor)
+    my_ts = TimeSeriesSplit(n_splits=8, test_size=5)
+
+    print('TIME SERIES:\n')
+    for (train, test) in my_ts.split(x):
+        print(f'Training indexes = {train}')
+        print(f'Testing indexes = {test}\n')
+
+
 def main():
 
     os.chdir('..')
@@ -40,13 +52,14 @@ def main():
 
     # print(frexco_dataset.head())
 
-    predictor = frexco_dataset.drop(['Data'], axis='columns')
+    sales = frexco_dataset.drop(['Data'], axis='columns')
     dates = frexco_dataset['Data'].apply(lambda x: x.strftime('%d-%m-%y'))
 
     # print(predictor.head())
     # print(dates.head())
 
-    plot_dist(dates, predictor, 'Demanda de Alimentos por Dia (Frexco)', 'Datas', 'Demanda')
+    time_series_build(sales['Vendas'].tolist())
+    plot_dist(dates, sales, 'Demanda de Alimentos por Dia (Frexco)', 'Datas', 'Demanda')
 
 
 if __name__ == '__main__':
