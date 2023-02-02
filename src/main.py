@@ -1,5 +1,7 @@
+from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.arima_model import ARIMA
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -81,6 +83,17 @@ def week_boxplot(dataset):
     plt.show()
 
 
+def decomposition_plot(dataset):
+
+    multiplicative_decomposition = seasonal_decompose(dataset['Vendas'], model='multiplicative', period=7)
+
+    plt.rcParams.update({'figure.figsize': (16, 12)})
+    multiplicative_decomposition.plot().suptitle('Multiplicative Decomposition', fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    plt.show()
+
+
 def pre_processing(data):
 
     encoding = preprocessing.LabelEncoder()
@@ -141,8 +154,8 @@ def xgboost_regression(data):
     new_data = new_data.drop(['Data'], axis='columns')
     new_data = pre_processing(new_data.copy())
 
-    trained_model = MultiOutputRegressor(xgb_regressor).fit(train, test)
-    predictions = trained_model.predict(new_data)
+    multi_xgb_model = MultiOutputRegressor(xgb_regressor).fit(train, test)
+    predictions = multi_xgb_model.predict(new_data)
 
     end = '2023-01-25'
     period = pd.date_range(begin, end).tolist()
