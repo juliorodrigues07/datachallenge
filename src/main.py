@@ -1,6 +1,8 @@
 from sklearn.linear_model import LinearRegression
+from sklearn import preprocessing
 import matplotlib.pyplot as plt
 import seaborn as sns
+import xgboost as xgb
 import pandas as pd
 import numpy as np
 import warnings
@@ -115,13 +117,45 @@ def main():
     # print(dates.head())
 
     # ANÁLISE DOS DADOS
-    print(sales.describe().transpose())
-    plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
-    plot_week_series(frexco_dataset)
-    week_boxplot(frexco_dataset)
+    # print(sales.describe().transpose())
+    # plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
+    # plot_week_series(frexco_dataset)
+    # week_boxplot(frexco_dataset)
+
+    frexco_dataset['Dia da Semana'] = frexco_dataset['Data'].dt.day_name('pt_BR.UTF-8')
 
     # MODELOS
-    linear_regression_test(sales)
+    # linear_regression_test(sales)
+    xgb_regressor = xgb.XGBRegressor(base_score=0.5,
+                                     booster='gbtree',
+                                     n_estimators=50,
+                                     early_stopping_rounds=10,
+                                     objective='reg:linear',
+                                     max_depth=3,
+                                     learning_rate=0.03)
+
+    train = frexco_dataset.drop(['Data'], axis='columns')
+    test = frexco_dataset['Vendas']
+
+    encoding = preprocessing.LabelEncoder()
+    encoding.fit(train['Dia da Semana'])
+    train['Dia da Semana'] = encoding.transform(train['Dia da Semana'].copy())
+
+    xgb_regressor.fit(train, test, eval_set=[(train, test), (train, test)], verbose=100)
+
+    begin = '2023-01-21'
+    end = '2023-01-25'
+    period = pd.date_range(begin, end).tolist()
+
+    new_data = pd.DataFrame(period, columns=['Data'])
+    new_data['Dia da Semana'] = new_data['Data'].dt.day_name('pt_BR.UTF-8')
+    new_data = new_data.drop(['Data'], axis='columns')
+
+    encoding.fit(new_data['Dia da Semana'])
+    new_data['Dia da Semana'] = encoding.transform(new_data['Dia da Semana'].copy())
+
+    # predictions = xgb_regressor.predict(new_data)
+    # print(predictions)
 
 
 if __name__ == '__main__':
