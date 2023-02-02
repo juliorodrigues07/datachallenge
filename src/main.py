@@ -1,6 +1,7 @@
 from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
@@ -105,6 +106,44 @@ def pre_processing(data):
     return data
 
 
+def stationary_test(data):
+
+    result = adfuller(data)
+    p_value = result[1]
+    n_lags = result[2]
+    print(f'p-value: {p_value}, lags: {n_lags}')
+
+    if p_value <= 0.05:
+        print('Rejeita H0, dados estão estacionários!')
+    else:
+        print("Não rejeita H0 (hipótese fraca), o que indica que os dados não são estacionários")
+
+
+def diff_plot(data):
+
+    first_diff = data.diff()
+    stationary_test(data.dropna())
+    second_diff = first_diff.diff()
+    stationary_test(second_diff.dropna())
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    data.plot(ax=ax, label='Original', color='blue')
+    first_diff.plot(ax=ax, label='Primeira Ordem', color='green')
+    second_diff.plot(ax=ax, label='Segunda Ordem', color='red')
+
+    ax.set_title('Diferenciação nas Séries Temporais', fontsize=14)
+    ax.set_ylabel("Vendas", fontsize=12)
+    ax.set_xlabel("Dias", fontsize=12)
+
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.8)
+    ax.grid(which='major', alpha=0.8)
+
+    plt.legend(['Original', 'Primeira Ordem', 'Segunda Ordem'], loc='lower left')
+    plt.show()
+
+
 def linear_regression_test(data):
 
     print('\nRegressão Linear\n')
@@ -186,6 +225,7 @@ def main():
     plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
     plot_week_series(frexco_dataset.copy())
     week_boxplot(frexco_dataset.copy())
+    diff_plot(sales.copy())
 
     # MODELOS
     linear_regression_test(sales)
