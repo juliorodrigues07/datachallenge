@@ -1,10 +1,13 @@
 from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.multioutput import MultiOutputRegressor
+from statsmodels.graphics.tsaplots import plot_pacf
+from statsmodels.graphics.tsaplots import plot_acf
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
 import seaborn as sns
 import xgboost as xgb
 import pandas as pd
@@ -81,6 +84,7 @@ def week_boxplot(dataset):
     ax.axvline(x=3.5, color='red', ls='--')
     ax.axvline(x=5.5, color='red', ls='--')
     ax.set_title('Demanda por Dia da Semana')
+
     plt.show()
 
 
@@ -92,6 +96,45 @@ def decomposition_plot(dataset):
     multiplicative_decomposition.plot().suptitle('Multiplicative Decomposition', fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
+    plt.show()
+
+
+def diff_plot(data):
+
+    first_diff = data.diff()
+    stationary_test(data.dropna())
+    second_diff = first_diff.diff()
+    stationary_test(second_diff.dropna())
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    data.plot(ax=ax, label='Original', color='blue')
+    first_diff.plot(ax=ax, label='Primeira Ordem', color='green')
+    second_diff.plot(ax=ax, label='Segunda Ordem', color='red')
+
+    ax.set_title('Diferenciação nas Séries Temporais', fontsize=14)
+    ax.set_ylabel("Vendas", fontsize=12)
+    ax.set_xlabel("Dias", fontsize=12)
+
+    ax.grid(which='minor')
+    ax.grid(which='minor', alpha=0.8)
+    ax.grid(which='major', alpha=0.8)
+
+    plt.legend(['Original', 'Primeira Ordem', 'Segunda Ordem'], loc='lower left')
+    plt.show()
+
+    return second_diff.dropna()
+
+
+def correlation_plots(diff):
+
+    fig = plt.figure(figsize=(12, 9))
+    ax1 = fig.add_subplot(211)
+    fig = sm.graphics.tsa.plot_acf(diff, title='Autocorrelação', lags=16, ax=ax1, color='mediumblue')
+    ax2 = fig.add_subplot(212)
+    fig = sm.graphics.tsa.plot_pacf(diff, title='Autocorrelação Parcial', lags=16, ax=ax2, color='mediumblue')
+
+    plt.tight_layout()
     plt.show()
 
 
@@ -117,31 +160,6 @@ def stationary_test(data):
         print('Rejeita H0, dados estão estacionários!')
     else:
         print("Não rejeita H0 (hipótese fraca), o que indica que os dados não são estacionários")
-
-
-def diff_plot(data):
-
-    first_diff = data.diff()
-    stationary_test(data.dropna())
-    second_diff = first_diff.diff()
-    stationary_test(second_diff.dropna())
-
-    fig, ax = plt.subplots(figsize=(10, 8))
-
-    data.plot(ax=ax, label='Original', color='blue')
-    first_diff.plot(ax=ax, label='Primeira Ordem', color='green')
-    second_diff.plot(ax=ax, label='Segunda Ordem', color='red')
-
-    ax.set_title('Diferenciação nas Séries Temporais', fontsize=14)
-    ax.set_ylabel("Vendas", fontsize=12)
-    ax.set_xlabel("Dias", fontsize=12)
-
-    ax.grid(which='both')
-    ax.grid(which='minor', alpha=0.8)
-    ax.grid(which='major', alpha=0.8)
-
-    plt.legend(['Original', 'Primeira Ordem', 'Segunda Ordem'], loc='lower left')
-    plt.show()
 
 
 def linear_regression_test(data):
@@ -225,7 +243,8 @@ def main():
     plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
     plot_week_series(frexco_dataset.copy())
     week_boxplot(frexco_dataset.copy())
-    diff_plot(sales.copy())
+    diff = diff_plot(sales.copy())
+    correlation_plots(diff.copy())
 
     # MODELOS
     linear_regression_test(sales)
