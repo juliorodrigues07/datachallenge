@@ -3,8 +3,9 @@ from sklearn.multioutput import MultiOutputRegressor
 from statsmodels.graphics.tsaplots import plot_pacf
 from statsmodels.graphics.tsaplots import plot_acf
 from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
@@ -138,17 +139,6 @@ def correlation_plots(diff):
     plt.show()
 
 
-def pre_processing(data):
-
-    encoding = preprocessing.LabelEncoder()
-
-    # Dicretiza atributos categóricos ('ruim', 'regular', 'bom', ...) -> (0, 1, 2, ...)
-    encoding.fit(data['Dia da Semana'])
-    data['Dia da Semana'] = encoding.transform(data['Dia da Semana'].copy())
-
-    return data
-
-
 def stationary_test(data):
 
     result = adfuller(data)
@@ -162,29 +152,46 @@ def stationary_test(data):
         print("Não rejeita H0 (hipótese fraca), o que indica que os dados não são estacionários")
 
 
+def pre_processing(data):
+
+    encoding = preprocessing.LabelEncoder()
+
+    # Dicretiza atributos categóricos ('ruim', 'regular', 'bom', ...) -> (0, 1, 2, ...)
+    encoding.fit(data['Dia da Semana'])
+    data['Dia da Semana'] = encoding.transform(data['Dia da Semana'].copy())
+
+    return data
+
+
+def print_result(predictions):
+
+    begin = '2023-01-21'
+    end = '2023-01-25'
+    period = pd.date_range(begin, end).tolist()
+    result = pd.DataFrame(period, columns=['Data'])
+    result = result.set_index('Data')
+
+    result['Vendas'] = np.around(predictions[:5]).astype(int)
+    print(result)
+
+
 def linear_regression_test(data):
 
     print('\nRegressão Linear\n')
     size = len(data)
-    begin = '2023-01-21'
-    end = '2023-01-25'
-    period = pd.date_range(begin, end).tolist()
 
     lr_model = LinearRegression(n_jobs=-1)
     lr_model.fit(np.arange(size).reshape(-1, 1), data)
 
     predictions = lr_model.predict(np.arange(size + 1, size + 6).reshape(-1, 1))
 
-    result = pd.DataFrame(period, columns=['Data'])
-    result = result.set_index('Data')
-
-    result['Vendas'] = np.around(predictions).astype(int)
-    print(result)
+    final = np.around(predictions).astype(int)
+    print_result(final)
 
 
 def xgboost_regression(data):
 
-    print('\nXGBoost\n')
+    print('\n\tXGBoost\n')
     test = data.drop(['Data'], axis='columns')
 
     data['Dia da Semana'] = data['Data'].dt.day_name('pt_BR.UTF-8')
@@ -214,13 +221,28 @@ def xgboost_regression(data):
     multi_xgb_model = MultiOutputRegressor(xgb_regressor).fit(train, test)
     predictions = multi_xgb_model.predict(new_data)
 
-    end = '2023-01-25'
-    period = pd.date_range(begin, end).tolist()
-    result = pd.DataFrame(period, columns=['Data'])
-    result = result.set_index('Data')
+    final = np.around(predictions[:5]).astype(int)
+    print_result(final)
 
-    result['Vendas'] = np.around(predictions[:5]).astype(int)
-    print(result)
+
+def arima_based_regressors(data):
+
+    print('\n\tARIMA\n')
+    train = data.drop(['Data'], axis='columns')
+    size = len(train)
+
+    arima_regressor = ARIMA(train, order=(1, 1, 0))
+    learning_model = arima_regressor.fit()
+    arima_predictions = learning_model.predict(size, size + 4).tolist()
+
+    print_result(arima_predictions)
+
+    print('\n\tSARIMAX\n')
+    sarimax_regressor = SARIMAX(train, order=(1, 1, 0), seasonal_order=(1, 1, 0, 7))
+    learning_model = sarimax_regressor.fit(disp=False)
+    sarima_predictions = learning_model.predict(size, size + 4).tolist()
+
+    print_result(sarima_predictions)
 
 
 def main():
@@ -248,7 +270,8 @@ def main():
 
     # MODELOS
     linear_regression_test(sales)
-    xgboost_regression(frexco_dataset)
+    xgboost_regression(frexco_dataset.copy())
+    arima_based_regressors(frexco_dataset.copy())
 
 
 if __name__ == '__main__':
