@@ -1,3 +1,4 @@
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
@@ -80,8 +81,20 @@ def week_boxplot(dataset):
     plt.show()
 
 
+def pre_processing(data):
+
+    encoding = preprocessing.LabelEncoder()
+
+    # Dicretiza atributos categóricos ('ruim', 'regular', 'bom', ...) -> (0, 1, 2, ...)
+    encoding.fit(data['Dia da Semana'])
+    data['Dia da Semana'] = encoding.transform(data['Dia da Semana'].copy())
+
+    return data
+
+
 def linear_regression_test(data):
 
+    print('\nRegressão Linear\n')
     size = len(data)
     begin = '2023-01-21'
     end = '2023-01-25'
@@ -92,13 +105,52 @@ def linear_regression_test(data):
 
     predictions = lr_model.predict(np.arange(size + 1, size + 6).reshape(-1, 1))
 
-    final = list()
-    predictions = predictions.tolist()
-    for x in predictions:
-        final.append(x[0])
+    result = pd.DataFrame(period, columns=['Data'])
+    result = result.set_index('Data')
 
-    predictions = pd.Series(final, index=period)
-    print(predictions)
+    result['Vendas'] = np.around(predictions).astype(int)
+    print(result)
+
+
+def xgboost_regression(data):
+
+    print('\nXGBoost\n')
+    test = data.drop(['Data'], axis='columns')
+
+    data['Dia da Semana'] = data['Data'].dt.day_name('pt_BR.UTF-8')
+
+    train = data.drop(['Data', 'Vendas'], axis='columns')
+    train = pre_processing(train.copy())
+
+    xgb_regressor = xgb.XGBRegressor(base_score=0.5,
+                                     booster='gbtree',
+                                     n_estimators=250,
+                                     n_jobs=-1,
+                                     objective='reg:squarederror',
+                                     max_depth=5,
+                                     learning_rate=0.03)
+
+    # Período para previsão (Deve conter os 7 dias para a codificação bater)
+    begin = '2023-01-21'
+    end = '2023-01-27'
+    period = pd.date_range(begin, end).tolist()
+
+    # Cria uma base de dados contendo as datas para previsão
+    new_data = pd.DataFrame(period, columns=['Data'])
+    new_data['Dia da Semana'] = new_data['Data'].dt.day_name('pt_BR.UTF-8')
+    new_data = new_data.drop(['Data'], axis='columns')
+    new_data = pre_processing(new_data.copy())
+
+    trained_model = MultiOutputRegressor(xgb_regressor).fit(train, test)
+    predictions = trained_model.predict(new_data)
+
+    end = '2023-01-25'
+    period = pd.date_range(begin, end).tolist()
+    result = pd.DataFrame(period, columns=['Data'])
+    result = result.set_index('Data')
+
+    result['Vendas'] = np.around(predictions[:5]).astype(int)
+    print(result)
 
 
 def main():
@@ -117,45 +169,14 @@ def main():
     # print(dates.head())
 
     # ANÁLISE DOS DADOS
-    # print(sales.describe().transpose())
-    # plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
-    # plot_week_series(frexco_dataset)
-    # week_boxplot(frexco_dataset)
-
-    frexco_dataset['Dia da Semana'] = frexco_dataset['Data'].dt.day_name('pt_BR.UTF-8')
+    print(sales.describe().transpose())
+    plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
+    plot_week_series(frexco_dataset.copy())
+    week_boxplot(frexco_dataset.copy())
 
     # MODELOS
-    # linear_regression_test(sales)
-    xgb_regressor = xgb.XGBRegressor(base_score=0.5,
-                                     booster='gbtree',
-                                     n_estimators=50,
-                                     early_stopping_rounds=10,
-                                     objective='reg:linear',
-                                     max_depth=3,
-                                     learning_rate=0.03)
-
-    train = frexco_dataset.drop(['Data'], axis='columns')
-    test = frexco_dataset['Vendas']
-
-    encoding = preprocessing.LabelEncoder()
-    encoding.fit(train['Dia da Semana'])
-    train['Dia da Semana'] = encoding.transform(train['Dia da Semana'].copy())
-
-    xgb_regressor.fit(train, test, eval_set=[(train, test), (train, test)], verbose=100)
-
-    begin = '2023-01-21'
-    end = '2023-01-25'
-    period = pd.date_range(begin, end).tolist()
-
-    new_data = pd.DataFrame(period, columns=['Data'])
-    new_data['Dia da Semana'] = new_data['Data'].dt.day_name('pt_BR.UTF-8')
-    new_data = new_data.drop(['Data'], axis='columns')
-
-    encoding.fit(new_data['Dia da Semana'])
-    new_data['Dia da Semana'] = encoding.transform(new_data['Dia da Semana'].copy())
-
-    # predictions = xgb_regressor.predict(new_data)
-    # print(predictions)
+    linear_regression_test(sales)
+    xgboost_regression(frexco_dataset)
 
 
 if __name__ == '__main__':
