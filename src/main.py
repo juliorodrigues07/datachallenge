@@ -51,12 +51,33 @@ def plot_week_series(dataset):
     weekend.plot(ax=ax, label='Fim de Semana', color='red')
 
     ax.axvline('2022-12-16', color='black', ls='--')
-    ax.legend(['Segunda a Sexta', 'Fim de Semana'])
+    ax.legend(['Segunda a Sexta', 'Fim de Semana'], loc='best')
 
     ax.grid(which='both')
     ax.grid(which='minor', alpha=0.8)
     ax.grid(which='major', alpha=0.8)
     plt.show()
+
+
+def linear_regression_test(data):
+
+    size = len(data)
+    begin = '2023-01-21'
+    end = '2023-01-25'
+    period = pd.date_range(begin, end).tolist()
+
+    lr_model = LinearRegression(n_jobs=-1)
+    lr_model.fit(np.arange(size).reshape(-1, 1), data)
+
+    predictions = lr_model.predict(np.arange(size + 1, size + 6).reshape(-1, 1))
+
+    final = list()
+    predictions = predictions.tolist()
+    for x in predictions:
+        final.append(x[0])
+
+    predictions = pd.Series(final, index=period)
+    print(predictions)
 
 
 def main():
@@ -78,6 +99,11 @@ def main():
     print(sales.describe().transpose())
     plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
     plot_week_series(frexco_dataset)
+
+    frexco_dataset['Data'] = pd.to_datetime(frexco_dataset['Data'], infer_datetime_format=True)
+    frexco_dataset = frexco_dataset.set_index('Data')
+
+    linear_regression_test(sales)
 
 
 if __name__ == '__main__':
