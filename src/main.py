@@ -1,14 +1,14 @@
 from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.multioutput import MultiOutputRegressor
 from statsmodels.graphics.tsaplots import plot_pacf
 from statsmodels.graphics.tsaplots import plot_acf
 from sklearn.linear_model import LinearRegression
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import adfuller
+from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
-import statsmodels.api as sm
 import seaborn as sns
 import xgboost as xgb
 import pandas as pd
@@ -20,7 +20,7 @@ import os
 
 warnings.filterwarnings('ignore')
 color_pal = sns.color_palette()
-# plt.style.use('fivethirtyeight')
+plt.style.use('fivethirtyeight')
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 
@@ -131,9 +131,9 @@ def correlation_plots(diff):
 
     fig = plt.figure(figsize=(12, 9))
     ax1 = fig.add_subplot(211)
-    fig = sm.graphics.tsa.plot_acf(diff, title='Autocorrelação', lags=16, ax=ax1, color='mediumblue')
+    fig = plot_acf(diff, title='Autocorrelação', lags=16, ax=ax1, color='mediumblue')
     ax2 = fig.add_subplot(212)
-    fig = sm.graphics.tsa.plot_pacf(diff, title='Autocorrelação Parcial', lags=16, ax=ax2, color='mediumblue')
+    fig = plot_pacf(diff, title='Autocorrelação Parcial', lags=16, ax=ax2, color='mediumblue')
 
     plt.tight_layout()
     plt.show()
@@ -173,9 +173,10 @@ def print_result(predictions):
 
     result['Vendas'] = np.around(predictions[:5]).astype(int)
     print(result)
+    print(f"Total:\t      {sum(result['Vendas'])}")
 
 
-def linear_regression_test(data):
+def linear_regression(data):
 
     print('\nRegressão Linear\n')
     size = len(data)
@@ -185,6 +186,7 @@ def linear_regression_test(data):
 
     predictions = lr_model.predict(np.arange(size + 1, size + 6).reshape(-1, 1))
 
+    # print(np.sqrt(mean_squared_error(np.arange(size).reshape(-1, 1), data)))
     final = np.around(predictions).astype(int)
     print_result(final)
 
@@ -218,9 +220,10 @@ def xgboost_regression(data):
     new_data = new_data.drop(['Data'], axis='columns')
     new_data = pre_processing(new_data.copy())
 
-    multi_xgb_model = MultiOutputRegressor(xgb_regressor).fit(train, test)
+    multi_xgb_model = MultiOutputRegressor(xgb_regressor, n_jobs=-1).fit(train, test)
     predictions = multi_xgb_model.predict(new_data)
 
+    # print(np.sqrt(mean_squared_error(train, test)))
     final = np.around(predictions[:5]).astype(int)
     print_result(final)
 
@@ -229,20 +232,21 @@ def arima_based_regressors(data):
 
     print('\n\tARIMA\n')
     train = data.drop(['Data'], axis='columns')
-    size = len(train)
 
     arima_regressor = ARIMA(train, order=(1, 1, 0))
     learning_model = arima_regressor.fit()
-    arima_predictions = learning_model.predict(size, size + 4).tolist()
+    arima_predictions = learning_model.forecast(5)
 
-    print_result(arima_predictions)
+    # print(np.sqrt(pow(learning_model.resid, 2).mean()))
+    print_result(arima_predictions.tolist())
 
     print('\n\tSARIMAX\n')
     sarimax_regressor = SARIMAX(train, order=(1, 1, 0), seasonal_order=(1, 1, 0, 7))
     learning_model = sarimax_regressor.fit(disp=False)
-    sarima_predictions = learning_model.predict(size, size + 4).tolist()
+    sarimax_predictions = learning_model.forecast(5)
 
-    print_result(sarima_predictions)
+    # print(np.sqrt(pow(learning_model.resid, 2).mean()))
+    print_result(sarimax_predictions.tolist())
 
 
 def main():
@@ -269,7 +273,7 @@ def main():
     correlation_plots(diff.copy())
 
     # MODELOS
-    linear_regression_test(sales)
+    linear_regression(sales.copy())
     xgboost_regression(frexco_dataset.copy())
     arima_based_regressors(frexco_dataset.copy())
 
