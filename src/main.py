@@ -4,12 +4,14 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import warnings
+import locale
 import os
 
 
 warnings.filterwarnings('ignore')
 color_pal = sns.color_palette()
 # plt.style.use('fivethirtyeight')
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 
 def plot_time_series(x, y, title, xlabel, ylabel):
@@ -33,6 +35,7 @@ def plot_time_series(x, y, title, xlabel, ylabel):
     ax.grid(which='both')
     ax.grid(which='minor', alpha=0.8)
     ax.grid(which='major', alpha=0.8)
+    ax.legend(['Vendas'], loc='upper right')
 
     plt.show()
 
@@ -56,6 +59,22 @@ def plot_week_series(dataset):
     ax.grid(which='both')
     ax.grid(which='minor', alpha=0.8)
     ax.grid(which='major', alpha=0.8)
+    plt.show()
+
+
+def week_boxplot(dataset):
+
+    dataset['Dia da Semana'] = dataset['Data'].dt.day_name('pt_BR.UTF-8')
+
+    frexco_dataset = dataset.set_index('Data')
+    frexco_dataset.index = pd.to_datetime(frexco_dataset.index)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.boxplot(data=frexco_dataset, x='Dia da Semana', y='Vendas', palette='Blues')
+
+    ax.axvline(x=3.5, color='red', ls='--')
+    ax.axvline(x=5.5, color='red', ls='--')
+    ax.set_title('Demanda por Dia da Semana')
     plt.show()
 
 
@@ -95,14 +114,13 @@ def main():
     # print(sales.head())
     # print(dates.head())
 
-    # Sumário
+    # ANÁLISE DOS DADOS
     print(sales.describe().transpose())
     plot_time_series(dates, sales, 'Demanda Diária de Alimentos (Frexco)', 'Datas', 'Demanda')
     plot_week_series(frexco_dataset)
+    week_boxplot(frexco_dataset)
 
-    frexco_dataset['Data'] = pd.to_datetime(frexco_dataset['Data'], infer_datetime_format=True)
-    frexco_dataset = frexco_dataset.set_index('Data')
-
+    # MODELOS
     linear_regression_test(sales)
 
 
