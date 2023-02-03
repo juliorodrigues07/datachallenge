@@ -1,12 +1,12 @@
 from ml_models import arima_based_regressors
-from data_analysis import decomposition_plot
-from data_analysis import correlation_plots
-from data_analysis import plot_time_series
-from data_analysis import plot_week_series
+from data_visualization import decomposition_plot
+from data_visualization import correlation_plots
+from data_visualization import plot_time_series
+from data_visualization import plot_week_series
 from ml_models import xgboost_regression
 from ml_models import linear_regression
-from data_analysis import week_boxplot
-from data_analysis import diff_plot
+from data_visualization import week_boxplot
+from data_visualization import diff_plot
 import pandas as pd
 import os
 
