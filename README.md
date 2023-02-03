@@ -1,6 +1,6 @@
 [![Python 3.10.6](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3106/)
 
-# Desafio - Data Analitycs 
+# Desafio - Data Analytics 
 
 Desafio realizado no processo seletivo para vaga de estágio em Data Analytics na Frexco.
 
@@ -34,7 +34,7 @@ Desafio realizado no processo seletivo para vaga de estágio em Data Analytics n
  
       pip install seaborn
        
-- Instalar tudo:
+- Para instalar todas as dependências:
 
       ./install_dependencies.sh
        
