@@ -32,7 +32,7 @@ Desafio realizado no processo seletivo para vaga de estágio em Data Analytics n
        
 - Biblioteca [seaborn](https://seaborn.pydata.org/)
  
-      pip install pip install seaborn
+      pip install seaborn
        
 - Instalar tudo:
 
